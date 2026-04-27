@@ -1,0 +1,38 @@
+{
+  "name": "agentic-code-review-orchestrator",
+  "version": "1.0.0",
+  "description": "A TypeScript CLI demonstrating OpenAI Codex SDK multi-agent orchestration for code review.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "agentic-code-review": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx src/index.ts",
+    "review": "npm run build --silent && node dist/index.js"
+  },
+  "keywords": [
+    "openai",
+    "codex",
+    "sdk",
+    "agents",
+    "code-review",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@openai/codex-sdk": "^0.125.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
