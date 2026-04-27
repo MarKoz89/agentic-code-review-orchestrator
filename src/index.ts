@@ -18,16 +18,22 @@ function hasHelpFlag(): boolean {
   return process.argv.includes("--help") || process.argv.includes("-h");
 }
 
+function hasDiffFlag(): boolean {
+  return process.argv.includes("--diff");
+}
+
 function printHelp(): void {
   console.log(`
 Agentic Code Review Orchestrator
 
 Usage:
   npm run review -- --repo <path>
+  npm run review -- --repo <path> --diff
   npm run review
 
 Options:
   --repo <path>   Local repository to review. Defaults to current directory.
+  --diff          Review recent git changes instead of the whole repository.
   -h, --help      Show this help text.
 `);
 }
@@ -52,7 +58,9 @@ async function main(): Promise<void> {
     throw new Error(`Invalid --repo value: expected a directory, but got a file: ${repoPath}`);
   }
 
-  await runReview(repoPath);
+  await runReview(repoPath, {
+    diffMode: hasDiffFlag()
+  });
 }
 
 main().catch((error: unknown) => {

@@ -5,6 +5,8 @@ export type AgentName =
   | "Fix Proposal Agent"
   | "Supervisor Agent";
 
+export type ReviewMode = "full" | "diff";
+
 export interface AgentResult {
   agentName: AgentName;
   prompt: string;
@@ -14,6 +16,10 @@ export interface AgentResult {
 export interface ReviewContext {
   repoPath: string;
   maxSupervisorIterations: number;
+  reviewMode: ReviewMode;
+  diff?: string;
+  diffSummary?: string;
+  diffSource?: string;
 }
 
 export interface ReviewState {
@@ -34,4 +40,8 @@ export interface CodexThread {
 export interface CodexRuntime {
   startThread(): CodexThread;
   resumeThread(threadId: string): CodexThread;
+}
+
+export interface ReviewOptions {
+  diffMode: boolean;
 }

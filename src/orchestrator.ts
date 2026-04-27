@@ -6,9 +6,10 @@ import { createPlannerPrompt } from "./agents/plannerAgent.js";
 import { createSupervisorPrompt } from "./agents/supervisorAgent.js";
 import { createTestPrompt } from "./agents/testAgent.js";
 import { runCodexAgent } from "./codexClient.js";
+import { readGitDiff } from "./gitDiff.js";
 import { Logger } from "./logger.js";
 import { writeMarkdownReport } from "./reportWriter.js";
-import type { AgentName, AgentResult, ReviewState } from "./types.js";
+import type { AgentName, AgentResult, ReviewOptions, ReviewState } from "./types.js";
 
 const MAX_SUPERVISOR_ITERATIONS = 2;
 
@@ -30,14 +31,28 @@ async function runAgent(agentName: AgentName, prompt: string): Promise<AgentResu
   };
 }
 
-export async function runReview(repoPathInput: string): Promise<string> {
+export async function runReview(
+  repoPathInput: string,
+  options: ReviewOptions = { diffMode: false }
+): Promise<string> {
   const logger = new Logger();
   const repoPath = path.resolve(repoPathInput);
+  const reviewMode = options.diffMode ? "diff" : "full";
+  const gitDiff = options.diffMode ? await readGitDiff(repoPath) : undefined;
+
+  if (options.diffMode) {
+    logger.step("Git diff review mode enabled");
+    logger.info(gitDiff?.summary || "No diff summary available.");
+  }
 
   const state: ReviewState = {
     context: {
       repoPath,
-      maxSupervisorIterations: MAX_SUPERVISOR_ITERATIONS
+      maxSupervisorIterations: MAX_SUPERVISOR_ITERATIONS,
+      reviewMode,
+      diff: gitDiff?.diff,
+      diffSummary: gitDiff?.summary,
+      diffSource: gitDiff?.source
     },
     supervisorIterations: [],
     accepted: false,
@@ -47,12 +62,12 @@ export async function runReview(repoPathInput: string): Promise<string> {
   logger.step(`Starting review for ${repoPath}`);
 
   logger.step("Sequential workflow: planning");
-  state.planner = await runAgent("Planner Agent", createPlannerPrompt(repoPath));
+  state.planner = await runAgent("Planner Agent", createPlannerPrompt(state.context));
 
   logger.step("Parallel workflow: code review and test review");
   const [codeReview, testReview] = await Promise.all([
-    runAgent("Code Review Agent", createCodeReviewPrompt(repoPath, state.planner.output)),
-    runAgent("Test Agent", createTestPrompt(repoPath, state.planner.output))
+    runAgent("Code Review Agent", createCodeReviewPrompt(state.context, state.planner.output)),
+    runAgent("Test Agent", createTestPrompt(state.context, state.planner.output))
   ]);
   state.codeReview = codeReview;
   state.testReview = testReview;
@@ -65,7 +80,7 @@ export async function runReview(repoPathInput: string): Promise<string> {
   state.fixProposal = await runAgent(
     "Fix Proposal Agent",
     createFixProposalPrompt(
-      repoPath,
+      state.context,
       state.planner.output,
       state.codeReview.output,
       state.testReview.output
@@ -77,7 +92,7 @@ export async function runReview(repoPathInput: string): Promise<string> {
     const supervisor = await runAgent(
       "Supervisor Agent",
       createSupervisorPrompt(
-        repoPath,
+        state.context,
         state.planner.output,
         state.codeReview.output,
         state.testReview.output,
@@ -101,7 +116,7 @@ export async function runReview(repoPathInput: string): Promise<string> {
       state.fixProposal = await runAgent(
         "Fix Proposal Agent",
         createFixProposalPrompt(
-          repoPath,
+          state.context,
           state.planner.output,
           state.codeReview.output,
           state.testReview.output,

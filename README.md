@@ -112,6 +112,12 @@ Review a specific local repository:
 npm run review -- --repo ../some-project
 ```
 
+Review recent git changes in pull-request style:
+
+```bash
+npm run review -- --repo . --diff
+```
+
 Review the current directory:
 
 ```bash
@@ -140,6 +146,30 @@ The terminal logs show each workflow stage, including:
 - `Supervisor loop: up to 2 iteration(s)`
 - the final report path
 
+## Git Diff / PR Review Mode
+
+Diff mode is a bonus feature beyond the base assignment. It focuses the review on recent code changes instead of the whole repository, which simulates a pull-request style code review.
+
+Run diff mode with:
+
+```bash
+npm run review -- --repo . --diff
+```
+
+When `--diff` is provided, the orchestrator reads git changes from the target repository. It first tries:
+
+```bash
+git diff HEAD~1..HEAD
+```
+
+If that command is unavailable, it falls back to:
+
+```bash
+git diff
+```
+
+The diff context is passed to the Planner, Code Review, Test, Fix Proposal, and Supervisor agents. The final report includes `Review mode: Git diff review` and a short `Diff Summary` section. If no changes are detected, the command still generates a report explaining that there was no diff to review.
+
 ## Output
 
 The generated report is written to:
@@ -151,6 +181,8 @@ output/code-review-report.md
 The report includes:
 
 - repository path
+- review mode
+- diff summary when `--diff` is used
 - planner review strategy
 - code quality and security findings
 - test coverage assessment

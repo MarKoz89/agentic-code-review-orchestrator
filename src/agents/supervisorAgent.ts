@@ -1,5 +1,20 @@
+import type { ReviewContext } from "../types.js";
+
+function diffContext(context: ReviewContext): string {
+  if (context.reviewMode !== "diff") {
+    return "Review mode: Full repository review.";
+  }
+
+  return `Review mode: Git diff review.
+Diff summary:
+${context.diffSummary || "No diff summary available."}
+
+Git diff:
+${context.diff || "No changes were detected in the git diff."}`;
+}
+
 export function createSupervisorPrompt(
-  repoPath: string,
+  context: ReviewContext,
   plan: string,
   codeReview: string,
   testReview: string,
@@ -11,7 +26,9 @@ export function createSupervisorPrompt(
 You are the Supervisor Agent in an Agentic Code Review Orchestrator.
 
 Target repository:
-${repoPath}
+${context.repoPath}
+
+${diffContext(context)}
 
 Supervisor iteration:
 ${iteration} of ${maxIterations}
@@ -29,6 +46,7 @@ Fix Proposal output:
 ${fixProposal}
 
 Evaluate whether the combined review is acceptable for an engineering report.
+In diff mode, evaluate whether the result is acceptable as a pull-request style diff review.
 
 Rules:
 - Do not modify files.
