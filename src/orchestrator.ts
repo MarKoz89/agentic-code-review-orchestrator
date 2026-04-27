@@ -49,17 +49,13 @@ export async function runReview(repoPathInput: string): Promise<string> {
   logger.step("Sequential workflow: planning");
   state.planner = await runAgent("Planner Agent", createPlannerPrompt(repoPath));
 
-  logger.step("Sequential workflow: code review");
-  state.codeReview = await runAgent(
-    "Code Review Agent",
-    createCodeReviewPrompt(repoPath, state.planner.output)
-  );
-
-  logger.step("Sequential workflow: test review");
-  state.testReview = await runAgent(
-    "Test Agent",
-    createTestPrompt(repoPath, state.planner.output, state.codeReview.output)
-  );
+  logger.step("Parallel workflow: code review and test review");
+  const [codeReview, testReview] = await Promise.all([
+    runAgent("Code Review Agent", createCodeReviewPrompt(repoPath, state.planner.output)),
+    runAgent("Test Agent", createTestPrompt(repoPath, state.planner.output))
+  ]);
+  state.codeReview = codeReview;
+  state.testReview = testReview;
 
   logger.step("Conditional branch: deciding whether fix proposals are useful");
   if (shouldSkipFixProposal(state.planner.output, state.codeReview.output, state.testReview.output)) {

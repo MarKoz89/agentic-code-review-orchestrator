@@ -1,4 +1,4 @@
-export function createTestPrompt(repoPath: string, plan: string, codeReview: string): string {
+export function createTestPrompt(repoPath: string, plan: string): string {
   return `
 You are the Test Agent in an Agentic Code Review Orchestrator.
 
@@ -7,9 +7,6 @@ ${repoPath}
 
 Planner output:
 ${plan}
-
-Code Review output:
-${codeReview}
 
 Inspect the repository's existing test setup and propose missing tests.
 

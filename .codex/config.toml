@@ -1,0 +1,13 @@
+# Project-scoped Codex configuration example.
+# This file is intentionally minimal because exact Codex config keys may vary by SDK or CLI version.
+# Local Codex/OpenAI authentication is handled outside this repository.
+# Do not add API keys, tokens, or secrets here.
+
+[project]
+name = "agentic-code-review-orchestrator"
+purpose = "Homework-friendly Codex SDK multi-agent code review orchestration demo"
+
+[safety]
+read_only_review = true
+no_plugins = true
+no_marketplace = true

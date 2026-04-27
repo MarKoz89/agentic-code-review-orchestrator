@@ -16,7 +16,7 @@ The implementation is intentionally small and readable. The important part is th
 
 The CLI entrypoint is `src/index.ts`. It parses the target repository path and calls the orchestrator.
 
-The main workflow lives in `src/orchestrator.ts`. It calls the Codex client wrapper, runs the agents in order, handles supervisor feedback, and writes the final report.
+The main workflow lives in `src/orchestrator.ts`. It calls the Codex client wrapper, runs the planner first, runs code review and test review in parallel, handles supervisor feedback, and writes the final report.
 
 `src/codexClient.ts` is the thin Codex SDK adapter. It exposes `runCodexAgent(agentName, prompt)` and uses the official SDK flow:
 
@@ -36,20 +36,40 @@ Each agent prompt is isolated in `src/agents/` so the roles are easy to inspect 
 - **Fix Proposal Agent** proposes concrete engineering improvements without editing files.
 - **Supervisor Agent** evaluates the combined outputs and decides whether the result is acceptable.
 
+## Coding Agent Configuration
+
+- **Coding agent:** Codex is the coding agent used by this project.
+- **Codex SDK:** `@openai/codex-sdk` is used by `src/codexClient.ts` to start and run Codex agent threads.
+- **MCP server:** `.vscode/mcp.json` configures the read-only OpenAI Developer Docs MCP server for official OpenAI documentation lookup.
+- **Codex config example:** `.codex/config.toml` provides a safe project-scoped example without secrets or API keys.
+- **Skills:** project-defined skills are documented in `docs/skills.md`.
+- **Subagents:** Planner, Code Review, Test, Fix Proposal, and Supervisor subagents are documented in `docs/subagents.md`.
+- **Agent instructions:** `AGENTS.md` documents Codex behavior, project context, safety rules, and read-only review behavior.
+- **No plugins / no marketplace:** this project does not use plugins or marketplace extensions.
+- **Submission format:** the project is submitted as GitHub source files and excludes local secrets, dependencies, build output, demo folders, and generated reports.
+
 ## Workflow Patterns
 
 This project demonstrates the required orchestration patterns:
 
-- **Sequential workflow:** Planner -> Code Review -> Test Review -> Fix Proposal.
-- **Conditional branching:** the orchestrator checks whether the repository appears empty or unanalyzable and logs that branch before producing a minimal proposal.
-- **Loop with maximum iterations:** the supervisor can request a refined fix proposal, but the loop is capped at two supervisor iterations.
+- **Sequential workflow:** Planner -> parallel review phase -> Fix Proposal -> Supervisor.
+- **Parallel workflow:** after planning, Code Review Agent and Test Agent run together with `Promise.all`.
+- **Conditional branching:** the orchestrator checks whether the repository appears empty or unanalyzable, and supervisor feedback determines whether refinement is needed.
+- **Loop / refinement iteration:** the supervisor can request a refined fix proposal, but the loop is capped at two supervisor iterations.
 - **Supervisor pattern:** the supervisor reviews all outputs and determines whether the report is acceptable.
+- **Markdown report generation:** the final engineering report is written to `output/code-review-report.md`.
 
 ## Assignment Mapping
 
+- **Codex:** Codex is the coding agent and is controlled through `@openai/codex-sdk`.
+- **MCP server:** `.vscode/mcp.json` configures the OpenAI Developer Docs MCP server for read-only official documentation lookup.
+- **Skills:** project-defined skills are documented in `docs/skills.md`; no marketplace skills are installed.
+- **Subagents:** all orchestrated subagents are documented in `docs/subagents.md`.
+- **No plugins / no marketplace:** the project explicitly avoids plugins and marketplace extensions.
 - **Practical Codex SDK usage:** `src/codexClient.ts` wraps `@openai/codex-sdk` and starts Codex threads programmatically.
 - **Multi-agent workflow:** the orchestrator coordinates Planner, Code Review, Test, Fix Proposal, and Supervisor agents.
-- **Sequential workflow:** the first four agents run in a fixed order so each step builds on the previous output.
+- **Sequential workflow:** planning happens first, fix proposal follows the review phase, and supervisor evaluation happens last.
+- **Parallel workflow:** Code Review Agent and Test Agent run concurrently after the planner creates shared context.
 - **Conditional branching:** supervisor feedback determines whether the workflow accepts the report or triggers refinement.
 - **Supervisor pattern:** the Supervisor Agent evaluates the combined outputs before the report is finalized.
 - **Refinement loop:** the workflow allows one additional refinement pass, with a maximum of two supervisor iterations.
@@ -72,7 +92,7 @@ cp .env.example .env
 
 Then set your credentials as appropriate.
 
-## Security Note
+## Security Notes
 
 - `.env` is for local development only and is ignored by git.
 - `.env.example` must never contain real secrets.
@@ -103,6 +123,22 @@ Show CLI help:
 ```bash
 npm run review -- --help
 ```
+
+## Demo
+
+Run the orchestrator against this project:
+
+```bash
+npm run review -- --repo .
+```
+
+The terminal logs show each workflow stage, including:
+
+- `Sequential workflow: planning`
+- `Parallel workflow: code review and test review`
+- `Conditional branch: deciding whether fix proposals are useful`
+- `Supervisor loop: up to 2 iteration(s)`
+- the final report path
 
 ## Output
 
@@ -144,7 +180,7 @@ npm run dev -- --repo ../some-project
 
 ## How This Fulfills The Assignment
 
-This project uses the OpenAI Codex SDK as the core mechanism for controlling coding agents programmatically. It creates a multi-agent code review workflow with five roles, explicit terminal logging, conditional control flow, bounded iteration, supervisor evaluation, and a final Markdown report.
+This project uses the OpenAI Codex SDK as the core mechanism for controlling coding agents programmatically. It creates a multi-agent code review workflow with five roles, explicit terminal logging, sequential and parallel control flow, conditional branching, bounded refinement iteration, supervisor evaluation, and a final Markdown report.
 
 It is runnable from the command line and organized as a normal TypeScript project suitable for GitHub submission.
 

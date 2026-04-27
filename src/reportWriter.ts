@@ -34,6 +34,7 @@ ${section("Supervisor Evaluation", supervisorOutput)}
 ## Orchestration Patterns Demonstrated
 
 - Sequential workflow: planner, code reviewer, test reviewer, and fix proposer run in order.
+- Parallel workflow: code review and test review run together after planning.
 - Conditional branching: the supervisor can accept the result or request a refined fix proposal.
 - Loop with max iterations: supervisor review runs up to ${state.context.maxSupervisorIterations} iteration(s).
 - Supervisor pattern: the supervisor evaluates all agent outputs before the final report is written.
